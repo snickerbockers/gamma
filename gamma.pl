@@ -187,6 +187,12 @@ for my $branch (@{$cfg{'branches'}}) {
     } else {
         on_branch_fail($branch, "failure to open $pubdir/BUILD_HASH for writing");
     }
+
+    my $latest_link = "$branchdir/LATEST";
+    if (-e $latest_link) {
+        unlink $latest_link;
+    }
+    symlink($pubdir, $latest_link);
 }
 
 my $deltatime = time() - $starttime;
