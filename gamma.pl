@@ -95,7 +95,17 @@ for my $branch (@{$cfg{'branches'}}) {
         next;
     }
 
-    if (!`cmake .`) {
+    if (!mkdir 'build') {
+        on_branch_fail($branch, "failure to create build directory");
+        next;
+    }
+
+    if (!chdir 'build') {
+        on_branch_fail($branch, "failure to enter build directory");
+        next;
+    }
+
+    if (!`cmake ..`) {
         on_branch_fail($branch, "failure to configure cmake");
         next;
     }
