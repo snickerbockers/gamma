@@ -23,6 +23,8 @@
 
 use v5.20;
 use POSIX qw(strftime);
+use File::Path qw(make_path);
+use File::Copy;
 
 sub on_branch_fail {
     my ($branch, $reason) = @_;
@@ -68,7 +70,7 @@ for (<$cfgfile>) {
 say "build directory is $cfg{builddir}";
 say "publish directory is $cfg{pubdir}";
 
-mkdir $cfg{'builddir'};
+make_path $cfg{'builddir'};
 chdir $cfg{'builddir'};
 
 exists $cfg{'branches'} or die 'no branches to build';
@@ -95,10 +97,7 @@ for my $branch (@{$cfg{'branches'}}) {
         next;
     }
 
-    if (!mkdir 'build') {
-        on_branch_fail($branch, "failure to create build directory");
-        next;
-    }
+    make_path 'build';
 
     if (!chdir 'build') {
         on_branch_fail($branch, "failure to enter build directory");
@@ -125,10 +124,29 @@ for my $branch (@{$cfg{'branches'}}) {
         next;
     }
 
-    my $pubdir = "$cfg{pubdir}/$branch/$datestring";
-    `mkdir -p $pubdir`;
-    `cp WashingtonDC-0.0.0-Source.tar.gz $pubdir/`;
-    `cp WashingtonDC-0.0.0-Linux.tar.gz $pubdir/`;
+    my $branchdir = "$cfg{pubdir}/$branch";
+    make_path $branchdir;
+
+    my $pubdir_first = "$cfg{pubdir}/$branch/$datestring";
+    my $pubdir = $pubdir_first;
+
+    my $idx = 0;
+    while (-e $pubdir) {
+        $idx++;
+        $pubdir = $pubdir_first . "_build_$idx";
+    }
+
+    make_path $pubdir;
+
+    if (!copy('WashingtonDC-0.0.0-Source.tar.gz', "$pubdir/")) {
+        on_branch_fail($branch, "failure to copy source tarball to $pubdir");
+        next;
+    }
+
+    if (!copy('WashingtonDC-0.0.0-Linux.tar.gz', "$pubdir/")) {
+        on_branch_fail($branch, "failure to copy binary tarball to $pubdir");
+        next;
+    }
 }
 
 my $deltatime = time() - $starttime;
