@@ -86,13 +86,13 @@ for my $branch (@{$cfg{'branches'}}) {
     say "checking out $branch";
     my $dir = "gamma_$branch";
     `rm -rf $dir`;
-    if (!`git clone --recursive $cfg{repo} $dir`) {
+    if (system('git', 'clone', '--recursive', "$cfg{repo}", $dir) != 0) {
         on_branch_fail($branch, "unable to clone");
         next;
     }
 
     chdir $dir;
-    if (!`git checkout $branch`) {
+    if (system('git', 'checkout', "$branch") != 0) {
         on_branch_fail($branch, "failure to checkout branch");
         next;
     }
@@ -104,22 +104,22 @@ for my $branch (@{$cfg{'branches'}}) {
         next;
     }
 
-    if (!`cmake ..`) {
+    if (system('cmake', '..') != 0) {
         on_branch_fail($branch, "failure to configure cmake");
         next;
     }
 
-    if (!`cmake --build . --target package_source`) {
+    if (system('cmake', '--build', '.', '--target', 'package_source') != 0) {
         on_branch_fail($branch, "failure to create source tarball");
         next;
     }
 
-    if (!`cmake --build .`) {
+    if (system('cmake', '--build', '.') != 0) {
         on_branch_fail($branch, "failure to build program");
         next;
     }
 
-    if (!`cpack .`) {
+    if (system('cpack', '.') != 0) {
         on_branch_fail($branch, "failure to package build");
         next;
     }
