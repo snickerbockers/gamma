@@ -81,7 +81,11 @@ for (@{$cfg{'branches'}}) {
     say "\t$_";
 }
 
+ build_branch:
 for my $branch (@{$cfg{'branches'}}) {
+    my $branchdir = "$cfg{pubdir}/$branch";
+    make_path $branchdir;
+
     chdir $cfg{'builddir'};
     say "checking out $branch";
     my $dir = "gamma_$branch";
@@ -96,6 +100,38 @@ for my $branch (@{$cfg{'branches'}}) {
         on_branch_fail($branch, "failure to checkout branch");
         next;
     }
+
+    my $hash = `git rev-parse HEAD`;
+    chomp $hash;
+
+    # check to see if we already made a build for this hash in this branch
+    # the purpose of this is so that we only publish a new nightly if something
+    # has changed.
+    #
+    # note that we do allow for multiple builds with identical hashes as long as
+    # they're in different branches.
+    if (opendir(my $branchdir_handle, $branchdir)) {
+        while (my $buildstamp = readdir($branchdir_handle)) {
+            next if ($buildstamp eq '.' || $buildstamp eq '..');
+            say "checking against build $buildstamp";
+            my $hashfile = "$branchdir/$buildstamp/BUILD_HASH";
+            if (-e $hashfile) {
+                open my $hashfile_handle, '<', $hashfile;
+                my $oldhash = <$hashfile_handle>;
+                close $hashfile_handle;
+                chomp $oldhash;
+                say "comparing \"$hash\" to \"$oldhash\"";
+                if ($oldhash eq $hash) {
+                    say "Branch $branch build skipped because there is " .
+                        "already a build of hash $hash";
+                    next build_branch;
+                }
+            } else {
+                say "$buildstamp did not have a BUILD_HASH file";
+            }
+        }
+    }
+#    closedir($branchdir_handle);
 
     make_path 'build';
 
@@ -124,9 +160,6 @@ for my $branch (@{$cfg{'branches'}}) {
         next;
     }
 
-    my $branchdir = "$cfg{pubdir}/$branch";
-    make_path $branchdir;
-
     my $pubdir_first = "$cfg{pubdir}/$branch/$datestring";
     my $pubdir = $pubdir_first;
 
@@ -146,6 +179,13 @@ for my $branch (@{$cfg{'branches'}}) {
     if (!copy('WashingtonDC-0.0.0-Linux.tar.gz', "$pubdir/")) {
         on_branch_fail($branch, "failure to copy binary tarball to $pubdir");
         next;
+    }
+
+    if (open(my $hashfile_handle, '>', "$pubdir/BUILD_HASH")) {
+        say $hashfile_handle $hash;
+        close($hashfile_handle)
+    } else {
+        on_branch_fail($branch, "failure to open $pubdir/BUILD_HASH for writing");
     }
 }
 
