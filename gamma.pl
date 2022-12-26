@@ -192,7 +192,7 @@ for my $branch (@{$cfg{'branches'}}) {
     if (-e $latest_link) {
         unlink $latest_link;
     }
-    symlink($pubdir, $latest_link);
+    symlink($datestring, $latest_link);
 }
 
 my $deltatime = time() - $starttime;
