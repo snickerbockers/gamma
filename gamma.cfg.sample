@@ -1,4 +1,10 @@
 branches=master;memory_map_improvement
+coverity_branches=master
+coverity_token=suck_my_dick
+coverity_email=dick-hertz@example.com
+coverity_version=0.0
+coverity_description=gamma build
+coverity_cmd=cov-build
 builddir=/home/snickers/gamma
 repo=https://github.com/washingtondc-emu/washingtondc
 pubdir=/home/snickers/gammapub

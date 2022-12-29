@@ -59,7 +59,7 @@ for (<$cfgfile>) {
     $key =~ s/\s+$//;
     $val =~ s/\s+$//;
 
-    if ($key eq 'branches') {
+    if ($key eq 'branches' || $key eq 'coverity_branches') {
         my @branchlist = split /;/, $val;
         $val = \@branchlist;
     }
@@ -131,7 +131,6 @@ for my $branch (@{$cfg{'branches'}}) {
             }
         }
     }
-#    closedir($branchdir_handle);
 
     make_path 'build';
 
@@ -193,6 +192,50 @@ for my $branch (@{$cfg{'branches'}}) {
         unlink $latest_link;
     }
     symlink($datestring, $latest_link);
+
+    # now upload to coverity (if enabled)
+    if (grep(/$branch/, @{$cfg{'coverity_branches'}})) {
+        say "*******************************************";
+        say "********* ITS COVERITY TIME $branch *********";
+        say "*******************************************";
+
+        my $checkoutdir = "$cfg{builddir}/gamma_$branch";
+        say "about to chdir to \"$checkoutdir\"";
+        chdir $checkoutdir;
+        make_path 'coverity_build';
+        chdir 'coverity_build';
+
+        if (system('cmake', '..') != 0) {
+            on_branch_fail($branch, 'failure to configure cmake (coverity)');
+            next;
+        }
+
+        if (system($cfg{'coverity_cmd'}, '--dir', 'cov-int', 'cmake', '--build', '.') != 0) {
+            on_branch_fail($branch, 'failure to build program with cov-build');
+            next;
+        }
+
+        my $covfile = 'washingtondc-coverity-data.tgz';
+        if (system('tar', '-czf', $covfile, 'cov-int') != 0) {
+            on_branch_fail($branch, 'failure to create coverity tarball');
+            next;
+        }
+
+        if (system('curl',
+                   '--form', "token=$cfg{coverity_token}",
+                   '--form', "email=$cfg{coverity_email}",
+                   '--form', "file=\@$covfile",
+                   '--form', "version=$cfg{coverity_version}",
+                   '--form', "description=$cfg{coverity_description}",
+                   'https://scan.coverity.com/builds?project=WashingtonDC') != 0) {
+            on_branch_fail($branch, 'failure to upload tarball to coverity');
+            next;
+        }
+
+        say "************************************************";
+        say "********* COVERITY SUBMISSION COMPLETE *********";
+        say "************************************************";
+    }
 }
 
 my $deltatime = time() - $starttime;
