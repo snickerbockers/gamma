@@ -225,8 +225,8 @@ for my $branch (@{$cfg{'branches'}}) {
                    '--form', "token=$cfg{coverity_token}",
                    '--form', "email=$cfg{coverity_email}",
                    '--form', "file=\@$covfile",
-                   '--form', "version=$cfg{coverity_version}",
-                   '--form', "description=$cfg{coverity_description}",
+                   '--form', "version=\"$cfg{coverity_version}\"",
+                   '--form', "description=\"$cfg{coverity_description}\"",
                    'https://scan.coverity.com/builds?project=WashingtonDC') != 0) {
             on_branch_fail($branch, 'failure to upload tarball to coverity');
             next;
