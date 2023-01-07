@@ -6,5 +6,6 @@ coverity_version=0.0
 coverity_description=gamma build
 coverity_cmd=cov-build
 builddir=/home/snickers/gamma
+logdir=/home/snickers/gammalogs
 repo=https://github.com/washingtondc-emu/washingtondc
 pubdir=/home/snickers/gammapub
