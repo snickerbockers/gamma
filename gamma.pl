@@ -43,6 +43,18 @@ sub on_branch_fail {
 sub log_cmd {
     my ($cmd, $logfiles) = @_;
     my ($txt, $exit) = tee_merged {system("$cmd");};
+
+    # pathetic hack to avoid leaking the coverity token that the curl
+    # command sends.
+    #
+    # the log files are publicly available over FTP so we have to redact our
+    # coverity token.
+    #
+    # note that stdout will still display the actual token; this is fine since
+    # stdout is not published for the whole world to see like the log file
+    # is.
+    $cmd =~ s/(?<=token\=)[^\s]*/INSERT_SECRET_TOKEN_HERE/g;
+
     for my $file (@{$logfiles}) {
         say $file "****************************************";
         say $file "*****";
